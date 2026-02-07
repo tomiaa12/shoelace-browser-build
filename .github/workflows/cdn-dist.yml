@@ -86,7 +86,9 @@ jobs:
 
           # Create an orphan branch containing only dist contents at repo root.
           git checkout --orphan "${CDN_BRANCH}"
-          git rm -rf . >/dev/null 2>&1 || true
+          # Remove everything from the working tree (including node_modules, dist, etc.)
+          # In an orphan branch, previous files become untracked, so git clean is the safest.
+          git clean -fdx
           cp -R "${tmpdir}/." .
           touch .nojekyll
 
