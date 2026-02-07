@@ -1,0 +1,22 @@
+{
+  "name": "shoelace-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vendor:install": "npm --prefix vendor/shoelace ci",
+    "build": "node scripts/build-shoelace-esm.mjs",
+    "build:themes": "node scripts/build-shoelace-themes.mjs"
+  },
+  "dependencies": {
+    "@ctrl/tinycolor": "^4.1.0",
+    "@floating-ui/dom": "^1.6.12",
+    "@shoelace-style/animations": "^1.2.0",
+    "@shoelace-style/localize": "^3.2.1",
+    "composed-offset-position": "^0.0.6",
+    "esbuild": "^0.24.0",
+    "esbuild-plugin-replace": "^1.4.0",
+    "lit": "^3.2.1",
+    "qr-creator": "^1.0.0"
+  }
+}
+
