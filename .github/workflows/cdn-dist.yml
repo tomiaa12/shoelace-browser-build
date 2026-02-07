@@ -89,7 +89,25 @@ jobs:
           # Remove everything from the working tree (including node_modules, dist, etc.)
           # In an orphan branch, previous files become untracked, so git clean is the safest.
           git clean -fdx
-          cp -R "${tmpdir}/." .
+
+          # Only publish a minimal, stable surface:
+          # - shoelace.esm.js
+          # - shoelace.esm.js.map
+          # - themes/
+          if [[ ! -f "${tmpdir}/shoelace.esm.js" ]]; then
+            echo "Missing ${tmpdir}/shoelace.esm.js"
+            exit 1
+          fi
+
+          cp "${tmpdir}/shoelace.esm.js" "./shoelace.esm.js"
+          if [[ -f "${tmpdir}/shoelace.esm.js.map" ]]; then
+            cp "${tmpdir}/shoelace.esm.js.map" "./shoelace.esm.js.map"
+          fi
+
+          if [[ -d "${tmpdir}/themes" ]]; then
+            mkdir -p "./themes"
+            cp -R "${tmpdir}/themes/." "./themes/"
+          fi
           touch .nojekyll
 
           git add -A
