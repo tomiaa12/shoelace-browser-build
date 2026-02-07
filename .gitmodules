@@ -1,0 +1,3 @@
+[submodule "vendor/shoelace"]
+	path = vendor/shoelace
+	url = https://github.com/shoelace-style/shoelace
