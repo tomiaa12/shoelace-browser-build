@@ -48,19 +48,100 @@ npm run build:themes
 
 ## 浏览器引用示例
 
-- 引入组件（单文件 ESM）
+- 方式 A：本地文件（你自己打包后的 dist）
 
 ```html
 <script type="module" src="./dist/shoelace.esm.js"></script>
 ```
 
-- 引入主题（可选）
+- 主题（可选）
 
 ```html
 <link rel="stylesheet" href="./dist/themes/light.css" />
 <!-- 或 -->
 <link rel="stylesheet" href="./dist/themes/dark.css" />
 ```
+
+- 方式 B：jsDelivr（推荐，直接用 CDN 引用）
+
+  > 前提：仓库在 GitHub 且为 public。push 一个版本 tag（例如 `v2.20.1`）后，GitHub Action 会把 `dist` 发布到 `cdn` 分支，并打 `cdn-v2.20.1` 这样的标签用于固定版本。
+  - 引入组件（单文件 ESM）
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/gh/<OWNER>/<REPO>@cdn-v2.20.1/shoelace.esm.js"
+></script>
+```
+
+- 主题（可选）
+
+```html
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/<OWNER>/<REPO>@cdn-v2.20.1/themes/light.css"
+/>
+<!-- 或 -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/<OWNER>/<REPO>@cdn-v2.20.1/themes/dark.css"
+/>
+```
+
+## 发布到 jsDelivr（GitHub Actions）
+
+本仓库带了一个 workflow：`/.github/workflows/cdn-dist.yml`，用于把构建后的 `dist` 发布成可被 jsDelivr 引用的内容（发布到 `cdn` 分支根目录，并打 `cdn-<tag>` 标签）。
+
+### 一次性准备
+
+1. 把仓库推到 GitHub（建议 **public**，否则 jsDelivr 无法拉取）
+2. 允许 Actions 写入仓库内容（用于推送 `cdn` 分支和 tag）：
+   - `Settings -> Actions -> General -> Workflow permissions`
+   - 选择 **Read and write permissions**
+
+### 触发发布
+
+- 方式 A：推 tag 自动发布（推荐）
+
+```bash
+git tag v2.20.1
+git push origin v2.20.1
+```
+
+会触发 workflow：
+
+- 运行 `npm ci`
+- 执行 `npm run build` + `npm run build:themes`
+- 把产物发布到 `cdn` 分支根目录
+- 打标签 `cdn-v2.20.1`（用于 jsDelivr 固定版本引用）
+
+- 方式 B：手动触发（临时构建）
+  - GitHub -> Actions -> 选择该 workflow -> `Run workflow`
+  - 可选填 `source_tag`，用于命名发布标签（例如填 `v2.20.1`，就会生成 `cdn-v2.20.1`）
+
+### 发布后文件结构（很重要）
+
+发布到 `cdn` 分支后，仓库根目录会直接是 `dist` 的内容，所以路径会变成：
+
+- `shoelace.esm.js`
+- `themes/light.css`
+- `themes/dark.css`
+
+## 可选：用 GitHub Pages 托管（不是自动开启的）
+
+这个 workflow **不会自动帮你开启 Pages**；但你可以把 Pages 的来源指向 `cdn` 分支，这样每次 workflow 更新 `cdn` 分支后，Pages 会自动更新内容。
+
+在 GitHub 仓库里设置：
+
+- `Settings -> Pages`
+- `Build and deployment -> Source`: **Deploy from a branch**
+- `Branch`: 选择 **`cdn`**
+- `Folder`: 选择 **`/ (root)`**
+
+设置完成后，Pages 通常会是：
+
+- `https://<OWNER>.github.io/<REPO>/shoelace.esm.js`
+- `https://<OWNER>.github.io/<REPO>/themes/light.css`
 
 ## 引入上游 Shoelace
 

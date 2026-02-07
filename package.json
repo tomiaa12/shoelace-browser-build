@@ -1,5 +1,5 @@
 {
-  "name": "my-shoelace-build",
+  "name": "shoelace-build",
   "private": true,
   "type": "module",
   "scripts": {

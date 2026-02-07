@@ -1,0 +1,104 @@
+name: Build dist and publish to jsDelivr (cdn branch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: "Optional. Used to name the cdn tag (e.g. v2.20.1). If empty, uses manual-<run_number>."
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cdn-dist-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dist
+        run: |
+          npm run build
+          npm run build:themes
+
+      - name: Publish dist to cdn branch and tag
+        shell: bash
+        env:
+          INPUT_SOURCE_TAG: ${{ inputs.source_tag }}
+        run: |
+          set -euo pipefail
+
+          # Decide a name that will be used for the CDN tag.
+          SOURCE_TAG=""
+          if [[ -n "${INPUT_SOURCE_TAG}" ]]; then
+            SOURCE_TAG="${INPUT_SOURCE_TAG}"
+          elif [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            SOURCE_TAG="${GITHUB_REF_NAME}"
+          else
+            SOURCE_TAG="manual-${GITHUB_RUN_NUMBER}"
+          fi
+
+          CDN_BRANCH="cdn"
+          CDN_TAG="cdn-${SOURCE_TAG}"
+
+          echo "SOURCE_TAG=${SOURCE_TAG}"
+          echo "CDN_BRANCH=${CDN_BRANCH}"
+          echo "CDN_TAG=${CDN_TAG}"
+
+          if [[ ! -d "dist" ]]; then
+            echo "dist/ not found. Build may have failed."
+            exit 1
+          fi
+
+          # Stash build output
+          tmpdir="$(mktemp -d)"
+          cp -R dist/. "${tmpdir}/"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Fail if the tag already exists on remote (avoid destructive tag rewrite).
+          if git ls-remote --tags origin "refs/tags/${CDN_TAG}" | grep -q "${CDN_TAG}$"; then
+            echo "Remote tag already exists: ${CDN_TAG}"
+            exit 1
+          fi
+
+          # Create an orphan branch containing only dist contents at repo root.
+          git checkout --orphan "${CDN_BRANCH}"
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -R "${tmpdir}/." .
+          touch .nojekyll
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "chore(cdn): publish dist for ${SOURCE_TAG}"
+          fi
+
+          # Keep cdn branch as a generated artifact branch.
+          git push --force origin "${CDN_BRANCH}"
+
+          # Tag the exact published commit for jsDelivr pinning.
+          git tag "${CDN_TAG}"
+          git push origin "${CDN_TAG}"
